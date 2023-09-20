@@ -1,0 +1,15 @@
+.body {
+    width: 200px;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.space-apart {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

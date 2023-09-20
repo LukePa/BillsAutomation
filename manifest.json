@@ -1,0 +1,22 @@
+{
+    "manifest_version": 3,
+    "name": "Bills",
+    "description": "Automated bills for the sigma house",
+    "version": "1.0",
+    "icons": {
+      "16": "tooltip_image.jpg"
+    },
+    "content_scripts": [
+      {
+        "js": [
+          "scripts/content.js"
+        ],
+        "matches": ["https://myaccount.uw.co.uk/billing"],
+        "run_at": "document_end"
+      }
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {"16": "tooltip_image.jpg"}
+    }
+  }
