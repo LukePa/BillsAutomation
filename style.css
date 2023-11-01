@@ -6,6 +6,11 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    overflow: hidden;
+}
+
+.form.hidden {
+    height: 0px;
 }
 
 .space-apart {
