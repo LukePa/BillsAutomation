@@ -1,69 +1,116 @@
-class Person {
-    constructor(name) {
-        this.name = String(name);
-        this._start = null;
-        this._end = null;
-    }
-
-    get startDate () {this._start} 
-    // This verifies value is a date, and end is a date with a higher value than this
-    set startDate(value) {
-        const dateValue = new Date(value);
-        if (Number.isNaN(value.valueOf())) throw new Error("Person start date must be a Date object or Date object constructor argument");
-        if (!this._start || !this._end) this._start = dateValue;
-        else if (this._end.valueOf() - dateValue.valueOf() > 0) this._start = dateValue;
-    }
-
-    get endDate () {this._end}
-    // This verifies value is a date, and start is a date with a lower value than this
-    set endDate(value) {
-        const dateValue = new Date(value);
-        if (Number.isNaN(value.valueOf())) throw new Error("Person start date must be a Date object or Date object constructor argument");
-        if (!this._start || !this._end) this._end = dateValue;
-        else if (dateValue.valueOf() - this._start.valueOf() > 0) this._end = dateValue;
-    }
-
-    getDaysAway = () => {
-        if (!this._start && !this._end) return 0;
-        else if (this._start || this._end) return NaN;
-        else return this._end.getDate() - (this._start.getDate() - 1)
-    }
-
-    get isValid() {!Number.isNaN(this.getDaysAway())}
+function throwErrorIfCantParseFloat(inputToParse) {
+    const value = Number.parseFloat(inputToParse);
+    if (!Number.isNaN(value)) return value;
+    throw new TypeError('input which is not a float or string representing a float given');
 }
 
-class Bills {
-    get wifiCost() {this._wifiCost}
-    set wifiCost(value) {if (!Number.isNaN(Number.parseFloat(value))) this._wifiCost = Number.parseFloat(value)}
-
-    get utilitiesCost() {this._utilitiesCost}
-    set utilitiesCost(value) {if (!Number.isNaN(Number.parseFloat(value))) this._utilitiesCost = Number.parseFloat(value)}
+function floatToPriceString (float) {
+    if (Number.isNaN(float)) throw new TypeError("float must be a float");
+    return `£${float.toFixed(2)}`
+}
 
 
-    constructor(names, days) {
-        if (!Array.isArray(names)) throw new TypeError("Bills must be constructed with an array of names");
-        this.people = names.map(name => new Person(name));
-        this._wifiCost = null;
-        if (Number.isNaN(this.wifi_cost)) throw new TypeError("wifi cost must be a float");
-        this._utilitiesCost = null;
-        this.days = Number.parseInt(days);
-        if (Number.isNaN(this.utilities_cost)) throw new Error("days must be an integer")
+export class Person {
+    constructor(name) {
+        this.name = String(name);
+        this._from = null;
+        this._to = null;
     }
 
-    getPayingDays(person) {
-        return this.days - person.getDaysAway()
+    get fromDate () {this._from} 
+    //** verifies value is a date */ 
+    set fromDate(value) {
+        const dateValue = new Date(value);
+        if (Number.isNaN(dateValue.valueOf())) this._from = null;
+        else this._from = dateValue;
+    }
+
+    get toDate () {this._to}
+    //** This verifies value is a date */
+    set toDate(value) {
+        const dateValue = new Date(value);
+        if (Number.isNaN(dateValue.valueOf())) this._to = null;
+        else this._to = dateValue;
+    }
+
+    _areBothOrNeitherDatesSet() {
+        if (this._from && this._to) return true;
+        if (this._from || this._go) return false;
+        return true;
+    }
+
+    _areBothDatesSet() {
+        return this._to && this._from;
+    }
+
+    _isNeitherDatesSet() {
+        return !(this._from && this._to)
+    }
+
+    _isFromDateGreaterThanToDate() {
+        if (!this._areBothDatesSet()) return false;
+        return this._from.valueOf() > this._to.valueOf();
+    }
+
+    getNumberOfDaysAway = () => {
+        if (this._isNeitherDatesSet()) return 0;
+        else if (!this._areBothOrNeitherDatesSet()) return NaN;
+        else if (!this._isFromDateGreaterThanToDate()) return NaN;
+        else return this._to.getDate() - this._from.getDate() - 1
+    }
+
+    get isValid() {
+        if (this._areBothDatesSet()) return true;
+        if (this._isNeitherDatesSet()) return true;
+        return false;
+    }
+}
+
+export class Bills {
+    /**
+     * @constructor
+     * @param {Array<Person>} people
+     * @param {Number} wifiCost
+    */
+    constructor(people, wifiCost) {
+        this.people = people
+        this.wifiCost = throwErrorIfCantParseFloat(wifiCost);
+        this.utilitiesCost = null;
+
+        // This is 1 indexed month number of last month
+        this.month = new Date().getMonth();
+    }
+
+    get daysInMonth() {
+        if (!Number.isInteger(this.month) 
+            || this.month < 1
+            || this.month > 12
+        ) return NaN;
+
+        const lastOfThisMonth = new Date(new Date().getFullYear(), this.month, 0);
+        return lastOfThisMonth.getDate();
+    }
+
+    get priceTotal() {
+        if (Number.isNaN(this.utilitiesCost)) return NaN;
+        return this.utilitiesCost + this.wifiCost;
+    }
+
+    getAmountOfDaysPersonPayingFor(person) {
+        return this.daysInMonth - person.getNumberOfDaysAway()
     }
 
     getSplitDenominator() {
-        return this.people.reduce((total, person) => total + this.getPayingDays(person))
+        return this.people.reduce((total, person) => total + this.getAmountOfDaysPersonPayingFor(person))
     }
 
-    individualBillSplit(person) {
-        return priceValue * (this.getPayingDays(person) / this.getSplitDenominator(person))
+    getIndividualUtilityBillTotal(person) {
+        if (Number.isNaN(this.utilitiesCost)) return NaN;
+        return this.utilitiesCost * (this.getAmountOfDaysPersonPayingFor(person) / this.getSplitDenominator(person))
     }
 
-    getOwed(person) {
-        return (this.wifi_cost / this.people.length) + this.individualBillSplit(person)
+    getIndividualTotalCost(person) {
+        return (this.wifi_cost / this.people.length) + this.getIndividualUtilityBillTotal(person)
     }
 
     get isValid() {
@@ -72,58 +119,46 @@ class Bills {
 
     getMessage() {
         if (!this.isValid) throw new Error("getMessage called on invalid Bills object")
-        return "";
+
+
+        let message = "BILLS\n";
+        message += `Utilities total: ${floatToPriceString(billsObject.utilitiesCost)}\n`;
+        message += `Wifi total: ${floatToPriceString(billsObject.wifiCost)}\n`;
+        message += "\n";
+        let awayAdded = false;
+
+        this.people.forEach((person) => {
+            if (Number.isNan(person.getNumberOfDaysAway())) {
+                throw new Error(`${person.name}'s number of days away is NaN`) 
+            } else if (person.getNumberOfDaysAway() > 0) {
+                message += `${person.name} was away for ${person.getNumberOfDaysAway()} days\n`;
+                awayAdded = true;
+            }
+        });
+
+        if (awayAdded) message += "\n";
+        message += "TOTALS TO PAY\n";
+
+        this.people.forEach((person) => {
+            message += `${person.name}: ${floatToPriceString(this.getIndividualTotalCost(person))}\n`
+        })
+
+        message += "\nPlease send a message when you have paid, thanks!"
+
+        return message;
     }
-}
 
-export const floatToPriceString = (float) => {
-    return `£${float.toFixed(2)}`
-}
-
-export const billsObjectToMessage = (billsObject) => {
-    let message = "BILLS\n";
-    message += `Utilities total: ${floatToPriceString(billsObject.bills)}\n`;
-    message += `Wifi total: ${floatToPriceString(billsObject.wifi)}\n`;
-    message += "\n";
-    let awayAdded = false;
-
-    ["Luke", "Bea", "Amelia", "Gary"].forEach((name) => {
-        if (billsObject[name.toLowerCase()].daysAway > 0) {
-            message += `${name} was away for ${billsObject[name.toLowerCase()].daysAway} days\n`
-            awayAdded = true;
+    async getMessageAndOpenMessenger() {
+        try {
+            const message = this.getMessage();
+            await navigator.clipboard.writeText(message);
+            window.open("https://www.messenger.com/t/5397372580384173");
+        } catch (e) {
+            alert(e.message);
         }
-    })
-
-    if (awayAdded) message += "\n";
-    message += "TOTALS TO PAY\n";
-
-    ["Luke", "Bea", "Amelia", "Gary"].forEach((name) => {
-        message += `${name}: ${floatToPriceString(billsObject[name.toLowerCase()].owes)}\n`
-    })
-
-    message += "\nPlease send a message when you have paid, thanks!"
-
-    return message;
+    }
 }
 
-
-
-export const getDaysInMonth = (dateIndex) => {
-    if ([0, 2, 4, 7, 9, 11].includes(dateIndex)) {
-        return 31;
-    }
-
-    if ([3, 5, 8, 10].includes(dateIndex)) {
-        return 30;
-    }
-
-    if (dateIndex === 1) {
-        // Does not currently support leap years
-        return 28;
-    }
-
-    throw new Error('Date index is out of range')
-}
 
 export const formatMonth = (month) => {
     const monthStr = month.toString();
