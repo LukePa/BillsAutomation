@@ -1,7 +1,8 @@
 
 import { 
     Person,
-    Bills
+    Bills,
+    getMonthStringFromInt
 } from "./popupModel.js";
 
 
@@ -14,6 +15,96 @@ const gary = new Person("Gary");
 
 
 const bills = new Bills([luke, amelia, bea, gary], WIFI_COST);
+
+
+
+class BillsViewFactory {
+    constructor(bills) {
+        this.bills = bills;
+    }
+
+    createFullForm() {
+        const container = document.createElement("div");
+        container.append(this.createUtilityCostInput());
+        container.append(this.createMonthSelect());
+        container.append(this.createPeopleForm());
+        container.append(this.createGenerateMessageButton());
+        return container;
+    }
+
+    createUtilityCostInput() {
+        const container = document.createElement("div");
+        const label = document.createElement("label");
+        label.innerHTML = "Utility Cost: ";
+        container.append(label);
+        const inputElement = document.createElement("input");
+        inputElement.addEventListener("change", (e) => {
+            this.bills.utilitiesCost = e.target.value;
+        })
+        container.append(inputElement);
+        return container;
+    }
+
+
+    createPeopleForm() {
+        const formElement = document.createElement("form");
+
+
+        this.bills.people.forEach(person => {
+            const factory = new PersonViewFactory(person);
+
+            formElement.append(factory.createFormSection());
+        });
+
+        return formElement;
+    }
+
+    createGenerateMessageButton() {
+        const button = document.createElement("button");
+        button.innerHTML = "Generate Message";
+        button.addEventListener("click", (e) => {
+            e.preventDefault();
+            this.bills.getMessageAndOpenMessenger();
+            console.log(this.bills)
+            console.log(this.bills.daysInMonth)
+        });
+        return button;
+    }
+
+    createMonthSelect() {
+        const monthSelect = document.createElement("select");
+        monthSelect.append(this.createMonthOption(1));
+        monthSelect.append(this.createMonthOption(2));
+        monthSelect.append(this.createMonthOption(3));
+        monthSelect.append(this.createMonthOption(4));
+        monthSelect.append(this.createMonthOption(5));
+        monthSelect.append(this.createMonthOption(6));
+        monthSelect.append(this.createMonthOption(7));
+        monthSelect.append(this.createMonthOption(8));
+        monthSelect.append(this.createMonthOption(9));
+        monthSelect.append(this.createMonthOption(10));
+        monthSelect.append(this.createMonthOption(11));
+        monthSelect.append(this.createMonthOption(12));
+
+        monthSelect.value = this.bills.month;
+
+        monthSelect.addEventListener("change", (e) => {
+            e.preventDefault();
+            this.bills.month = e.target.value;
+        })
+
+        return monthSelect
+        
+    }
+
+    createMonthOption(monthInt) {
+        const monthString = getMonthStringFromInt(monthInt);
+        const option = document.createElement("option");
+        option.setAttribute("value", monthInt);
+        option.innerHTML = monthString;
+        return option;
+    }
+}
 
 
 class PersonViewFactory {
@@ -49,7 +140,6 @@ class PersonViewFactory {
 
 
         return containingDiv;
-
     }
 
     /**
@@ -58,6 +148,7 @@ class PersonViewFactory {
      */
     _createPersonDateOption(labelText) {
         const container = document.createElement('div');
+        container.classList.add("space-apart")
 
         const label = document.createElement('label');
         label.innerHTML = labelText;
@@ -72,17 +163,10 @@ class PersonViewFactory {
     }
 }
 
-const personViewFactory = new PersonViewFactory(luke);
+const factory = new BillsViewFactory(bills);
 
-const test = document.querySelector(".form");
-test.append(personViewFactory.createFormSection())
-const b = document.createElement('button');
-b.addEventListener('click', () => {
-    console.log(`FROM: ${luke._from}`)
-    console.log(`TO: ${luke._to}`)
-})
-test.append(b)
-
+const test = document.querySelector("body");
+test.append(factory.createFullForm());
 
 
 

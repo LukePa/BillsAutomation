@@ -5,7 +5,7 @@ function throwErrorIfCantParseFloat(inputToParse) {
 }
 
 function floatToPriceString (float) {
-    if (Number.isNaN(float)) throw new TypeError("float must be a float");
+    if (Number.isNaN(float)) throw new TypeError("floatToPriceString input must not be NaN");
     return `£${float.toFixed(2)}`
 }
 
@@ -49,14 +49,20 @@ export class Person {
 
     _isFromDateGreaterThanToDate() {
         if (!this._areBothDatesSet()) return false;
-        return this._from.valueOf() > this._to.valueOf();
+        return this._to.valueOf() > this._from.valueOf();
+    }
+
+    _isOnlyOneDateSet() {
+        if (this._from && this._to) return false;
+        else if (this._from || this._to) return true;
+        return false;
     }
 
     getNumberOfDaysAway = () => {
         if (this._isNeitherDatesSet()) return 0;
-        else if (!this._areBothOrNeitherDatesSet()) return NaN;
+        else if (this._isOnlyOneDateSet()) return NaN;
         else if (!this._isFromDateGreaterThanToDate()) return NaN;
-        else return this._to.getDate() - this._from.getDate() - 1
+        else return this._to.getDate() - this._from.getDate() + 1;
     }
 
     get isValid() {
@@ -75,10 +81,27 @@ export class Bills {
     constructor(people, wifiCost) {
         this.people = people
         this.wifiCost = throwErrorIfCantParseFloat(wifiCost);
-        this.utilitiesCost = null;
+        this._utilitiesCost = null;
 
         // This is 1 indexed month number of last month
-        this.month = new Date().getMonth();
+        this._month = new Date().getMonth();
+    }
+
+    get utilitiesCost() {
+        return this._utilitiesCost;
+    }
+    set utilitiesCost(value) {
+        if (value === null || value === undefined || value === "") this._utilitiesCost = null;
+        else if (Number.isNaN(Number.parseFloat(value))) throw new Error("Bills object must be a float or null");
+        else this._utilitiesCost = Number.parseFloat(value);
+    }
+
+    get month() {return this._month}
+    set month(value) {
+        if (Number.isNaN(Number.parseInt(value))) return;
+        else {
+            this._month = Number.parseInt(value);
+        }
     }
 
     get daysInMonth() {
@@ -97,20 +120,26 @@ export class Bills {
     }
 
     getAmountOfDaysPersonPayingFor(person) {
-        return this.daysInMonth - person.getNumberOfDaysAway()
+        if (!Number.isNaN(person.getNumberOfDaysAway())) return this.daysInMonth - person.getNumberOfDaysAway();
+        else {
+            return this.daysInMonth;
+        }
     }
 
     getSplitDenominator() {
-        return this.people.reduce((total, person) => total + this.getAmountOfDaysPersonPayingFor(person))
+        return this.people.reduce((total, person) => total + this.getAmountOfDaysPersonPayingFor(person), 0)
     }
 
     getIndividualUtilityBillTotal(person) {
+        console.log(this.utilitiesCost)
+        console.log(this.getAmountOfDaysPersonPayingFor(person))
+        console.log(this.getSplitDenominator(person))
         if (Number.isNaN(this.utilitiesCost)) return NaN;
         return this.utilitiesCost * (this.getAmountOfDaysPersonPayingFor(person) / this.getSplitDenominator(person))
     }
 
     getIndividualTotalCost(person) {
-        return (this.wifi_cost / this.people.length) + this.getIndividualUtilityBillTotal(person)
+        return (this.wifiCost / this.people.length) + this.getIndividualUtilityBillTotal(person)
     }
 
     get isValid() {
@@ -121,14 +150,14 @@ export class Bills {
         if (!this.isValid) throw new Error("getMessage called on invalid Bills object")
 
 
-        let message = "BILLS\n";
-        message += `Utilities total: ${floatToPriceString(billsObject.utilitiesCost)}\n`;
-        message += `Wifi total: ${floatToPriceString(billsObject.wifiCost)}\n`;
+        let message = `Bills for ${getMonthStringFromInt(this.month)}\n`;
+        message += `Utilities total: ${floatToPriceString(this.utilitiesCost)}\n`;
+        message += `Wifi total: ${floatToPriceString(this.wifiCost)}\n`;
         message += "\n";
         let awayAdded = false;
 
         this.people.forEach((person) => {
-            if (Number.isNan(person.getNumberOfDaysAway())) {
+            if (Number.isNaN(person.getNumberOfDaysAway())) {
                 throw new Error(`${person.name}'s number of days away is NaN`) 
             } else if (person.getNumberOfDaysAway() > 0) {
                 message += `${person.name} was away for ${person.getNumberOfDaysAway()} days\n`;
@@ -164,4 +193,23 @@ export const formatMonth = (month) => {
     const monthStr = month.toString();
     if (monthStr.length === 1) return `0${monthStr}`
     else return monthStr
+}
+
+export const getMonthStringFromInt = (monthInt) => {
+    switch (monthInt) {
+        case 1: return "January";
+        case 2: return "February";
+        case 3: return "March";
+        case 4: return "April";
+        case 5: return "May";
+        case 6: return "June";
+        case 7: return "July";
+        case 8: return "August";
+        case 9: return "September";
+        case 10: return "October";
+        case 11: return "November";
+        case 12: return "December";
+        default:
+            throw new Error("Invalid month int given to getMonthStringFromInt")
+    }
 }
